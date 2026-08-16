@@ -1,0 +1,52 @@
+1. Customer / User
+
+Individuals who need to manage a list of tasks, such as students, developers, or anyone who wants to keep track of things they need to do.
+
+2. Symptoms
+
+Users may:
+
+Forget tasks they need to complete.
+Have difficulty tracking which tasks are finished.
+Keep task information scattered across notes or other places.
+Need a programmatic way for another application to manage their tasks.
+3. Problem
+
+There is no simple centralized system that allows an application to create, retrieve, modify, and delete tasks in a structured way.
+
+4. Cause
+
+Task information may be stored manually or inconsistently, without a standardized interface for applications to access and manage it.
+
+5. Proposed Solution
+
+Build a RESTful Todo API that provides a standardized HTTP interface for managing Todo data.
+
+The API will allow clients to:
+
+Create Todos
+Retrieve Todos
+Update Todos
+Delete Todos
+
+The data will be stored in a relational database rather than disappearing when the application stops.
+
+6. Initial Project Scope
+
+V1 Todo API:
+
+Area			Scope
+Language		Python
+Backend			Python web framework
+Database		Relational database
+Data			Todo
+Operations		Create, Read, Update, Delete
+API format		JSON
+Validation		Basic input validation
+Errors			Basic API error handling
+Testing			Basic API tests
+Documentation		API documentation
+Authentication		Not in V1
+Deployment		Not in V1
+
+

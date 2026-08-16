@@ -1,0 +1,93 @@
+Framework
+
+FastAPI : Good balance for learning APIs
+
+
+What Are We Actually Build
+
+Client : HTTP Request > FastAPI : Router, Validation, Business Logic > Database > Todo Data
+
+
+Development Roadmap
+
+We'll divide V1 into these stages:
+
+Stage 1 — Project Setup
+Create project directory
+Create virtual environment
+Install dependencies
+Understand requirements.txt
+Create basic application
+Stage 2 — First API
+Understand HTTP
+Create our first route
+GET request
+JSON response
+Run the development server
+Test the API
+Stage 3 — Todo Model
+Decide Todo data structure
+Understand request models
+Validation
+Create Todo endpoint
+Stage 4 — CRUD
+
+Implement:
+
+POST   /todos
+GET    /todos
+GET    /todos/{id}
+PUT    /todos/{id}
+DELETE /todos/{id}
+Stage 5 — Database
+
+We'll replace temporary in-memory data with a relational database.
+
+We'll learn:
+
+Database
+   ↓
+Table
+   ↓
+Row
+   ↓
+SQL
+   ↓
+ORM
+Stage 6 — Architecture
+
+Once the application actually works, we'll separate responsibilities.
+
+Something along the lines of:
+
+app/
+├── main.py
+├── routers/
+├── models/
+├── schemas/
+├── services/
+└── database/
+
+
+
+
+Todo Data
+
+id > identify each todo > Backend Side
+title > short name of the task > user
+description > additional detail > user
+is_complete > mark the task complete or not > boolean > user via Backend 
+created_at > when it was created > Backend
+updated_at >    when it was last modified > Backend
+
+
+title should not be empty > validation
+description > optional
+is_complete > boolean > begin with false 
+
+
+>> Future Features
+Urgency (Low Medium High)
+ex >> urgency: Optional[int] = None
+   >> change int to Low Medium High Option (maybe use conditional >> if else)
+   >> if not, find other method
