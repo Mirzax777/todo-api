@@ -1,94 +1,137 @@
-from fastapi import FastAPI, status, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status, Response
+from sqlalchemy.orm import Session
+
+from database import engine, get_db
+import models
 from schemas import TodoCreate, TodoUpdate
-from random import randrange
+
+# Create tables in PostgreSQL automatically
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="Todo API")
 
 
-app = FastAPI()
+# =============================================================================
+# HEALTH / BASE ENDPOINTS
+# =============================================================================
 
 
-my_posts = [
-    {
-        "id": 1,
-        "title": "Learn FastAPI",
-        "description": "Build a Todo API",
-        "is_completed": False
-    },
-    {
-        "id": 2,
-        "title": "Study Python",
-        "description": "",
-        "is_completed": False
-    }
-]
-
-
-# HOME
 @app.get("/")
 def root():
     return {"message": "Todo API is running"}
 
 
-# POST
-@app.post("/todos", status_code=status.HTTP_201_CREATED)
-def create_todo(todo: TodoCreate):
-    post_dict = todo.model_dump()
-    post_dict["id"] = randrange(1, 99)
-
-    my_posts.append(post_dict)
-
-    return {"data": post_dict}
+# =============================================================================
+# ORM ROUTES (SQLAlchemy)
+# =============================================================================
 
 
 # GET ALL
 @app.get("/todos")
-def get_todos():
-    return {"data": my_posts}
+def get_todos(db: Session = Depends(get_db)):
+    todos = db.query(models.Todo).all()
+    return {"data": todos}
 
 
 # GET ONE
 @app.get("/todos/{id}")
-def get_todo(id: int):
-    for todo in my_posts:
-        if todo["id"] == id:
-            return {"data": todo}
+def get_todo(id: int, db: Session = Depends(get_db)):
+    todo = db.query(models.Todo).filter(models.Todo.id == id).first()
 
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Todo with id {id} not found"
-    )
+    if not todo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Todo with id {id} not found",
+        )
+    return {"data": todo}
 
 
-# PUT
+# CREATE (POST)
+@app.post("/todos", status_code=status.HTTP_201_CREATED)
+def create_todo(todo: TodoCreate, db: Session = Depends(get_db)):
+    new_todo = models.Todo(**todo.model_dump())
+    db.add(new_todo)
+    db.commit()
+    db.refresh(new_todo)
+    return {"data": new_todo}
+
+
+# UPDATE (PUT)
 @app.put("/todos/{id}")
-def update_todo(id: int, todo: TodoUpdate):
-    for i, existing_todo in enumerate(my_posts):
-        if existing_todo["id"] == id:
+def update_todo(id: int, todo: TodoUpdate, db: Session = Depends(get_db)):
+    todo_query = db.query(models.Todo).filter(models.Todo.id == id)
+    updated_todo = todo_query.first()
 
-            updated_todo = todo.model_dump()
-            updated_todo["id"] = id
+    if not updated_todo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Todo with id {id} not found",
+        )
 
-            my_posts[i] = updated_todo
+    # Convert schema to dict, ignoring fields that weren't passed in Postman
+    update_data = todo.model_dump(exclude_unset=True)
 
-            return {"data": updated_todo}
+    todo_query.update(update_data, synchronize_session=False)
+    db.commit()
+    db.refresh(updated_todo)
 
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Todo with id {id} not found"
-    )
+    return {"data": updated_todo}
 
 
 # DELETE
-@app.delete("/todos/{id}")
-def delete_todo(id: int):
-    for i, todo in enumerate(my_posts):
-        if todo["id"] == id:
-            my_posts.pop(i)
+@app.delete("/todos/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_todo(id: int, db: Session = Depends(get_db)):
+    todo_query = db.query(models.Todo).filter(models.Todo.id == id)
 
-            return {
-                "message": f"Successfully deleted todo number {id}"
-            }
+    if not todo_query.first():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Todo with id {id} not found",
+        )
 
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Todo with id {id} not found"
-    )
+    todo_query.delete(synchronize_session=False)
+    db.commit()
+
+    # 204 No Content shouldn't return a body
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# =============================================================================
+# RAW SQL ROUTES (Uncomment below to test with psycopg cursor instead of ORM)
+# =============================================================================
+
+# from database import get_db_connection
+# conn = get_db_connection()
+# cursor = conn.cursor()
+
+# @app.get("/sql/todos")
+# def get_todos_sql():
+#     cursor.execute("SELECT * FROM todos;")
+#     return {"data": cursor.fetchall()}
+
+# @app.get("/sql/todos/{id}")
+# def get_todo_sql(id: int):
+#     cursor.execute("SELECT * FROM todos WHERE id = %s;", (id,))
+#     todo = cursor.fetchone()
+#     if not todo:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Todo with id {id} not found")
+#     return {"data": todo}
+
+# @app.post("/sql/todos", status_code=status.HTTP_201_CREATED)
+# def create_todo_sql(todo: TodoCreate):
+#     cursor.execute(
+#         "INSERT INTO todos (title, description) VALUES (%s, %s) RETURNING *;",
+#         (todo.title, todo.description)
+#     )
+#     new_todo = cursor.fetchone()
+#     conn.commit()
+#     return {"data": new_todo}
+
+# @app.delete("/sql/todos/{id}", status_code=status.HTTP_204_NO_CONTENT)
+# def delete_todo_sql(id: int):
+#     cursor.execute("DELETE FROM todos WHERE id = %s RETURNING *;", (id,))
+#     deleted_todo = cursor.fetchone()
+#     conn.commit()
+#     if not deleted_todo:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Todo with id {id} not found")
+#     return Response(status_code=status.HTTP_204_NO_CONTENT)
