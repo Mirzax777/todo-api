@@ -25,3 +25,27 @@ class Todo(Base):
         server_default=func.now(), 
         onupdate=func.now()
     )
+
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(
+        BigInteger, 
+        Identity(start=1, increment=1), 
+        primary_key=True
+    )
+    username = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False)
+    password = Column(String(255), nullable=False)
+    created_at = Column(
+        TIMESTAMP(timezone=True), 
+        nullable=False, 
+        server_default=func.now()
+    )
+    updated_at = Column(
+        TIMESTAMP(timezone=True), 
+        nullable=False, 
+        server_default=func.now(), 
+        onupdate=func.now()
+    )
